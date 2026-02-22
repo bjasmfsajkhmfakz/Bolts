@@ -1,0 +1,829 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SHADOWRIDE ORACLE • BK 2026</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&amp;display=swap');
+        
+        body {
+            font-family: 'Press Start 2P', system-ui;
+            background: linear-gradient(180deg, #0a0a0a 0%, #1a1a2e 100%);
+            color: #a3e635;
+            overflow-x: hidden;
+        }
+        
+        .neon-text {
+            text-shadow: 
+                0 0 5px #a3e635,
+                0 0 10px #a3e635,
+                0 0 20px #22c55e,
+                0 0 40px #15803d;
+        }
+        
+        .glitch {
+            animation: glitch 1s linear infinite;
+        }
+        
+        @keyframes glitch {
+            2%, 64% { transform: translate(2px,0) skew(0deg); }
+            4%, 60% { transform: translate(-2px,0) skew(0deg); }
+            62% { transform: translate(0,0) skew(5deg); }
+        }
+        
+        .scanline {
+            position: relative;
+        }
+        .scanline::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(transparent, rgba(163, 230, 53, 0.15), transparent);
+            animation: scan 4s linear infinite;
+            pointer-events: none;
+        }
+        @keyframes scan {
+            0% { transform: translateY(-100%); }
+            100% { transform: translateY(300%); }
+        }
+        
+        .tab-active {
+            border-bottom: 4px solid #a3e635;
+            color: #a3e635;
+        }
+        
+        .prob-bar {
+            transition: width 2s ease-in-out;
+        }
+
+        #chart-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.85);
+            z-index: 100;
+            align-items: center;
+            justify-content: center;
+        }
+
+        #chart-modal .modal-content {
+            background: #111;
+            border: 2px solid #a3e635;
+            border-radius: 1rem;
+            padding: 2rem;
+            width: 80%;
+            max-width: 600px;
+            position: relative;
+        }
+
+        #chart-modal .close {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            color: #a3e635;
+            font-size: 1.5rem;
+            cursor: pointer;
+        }
+
+        .past-row {
+            opacity: 0.6;
+        }
+
+        .past-row td {
+            color: #a3e63580;
+        }
+
+        /* New styles for crazy features */
+        .heat-map-canvas {
+            border: 2px solid #a3e635;
+            border-radius: 8px;
+        }
+
+        .forum-post {
+            background: #111;
+            border: 1px solid #a3e63530;
+            padding: 1rem;
+            margin-bottom: 1rem;
+            border-radius: 8px;
+        }
+
+        .news-item {
+            background: #111;
+            border-left: 4px solid #a3e635;
+            padding: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .risk-gauge {
+            width: 200px;
+            height: 100px;
+            background: conic-gradient(#ff0000 0% 33%, #ffff00 33% 66%, #00ff00 66% 100%);
+            border-radius: 100px 100px 0 0;
+            position: relative;
+        }
+
+        .risk-needle {
+            width: 2px;
+            height: 80px;
+            background: white;
+            position: absolute;
+            bottom: 0;
+            left: 50%;
+            transform-origin: bottom;
+            transition: transform 0.5s;
+        }
+
+        .submit-form input[type="file"] {
+            background: #222;
+            border: 1px solid #a3e635;
+            color: #a3e635;
+            padding: 0.5rem;
+        }
+    </style>
+</head>
+<body class="min-h-screen">
+    <!-- HEADER -->
+    <header class="border-b border-lime-500/30 bg-black/80 backdrop-blur-md sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between flex-wrap">
+            <div class="flex items-center gap-3">
+                <i class="fas fa-bolt text-4xl text-lime-400"></i>
+                <div>
+                    <h1 class="text-3xl font-bold tracking-tighter neon-text glitch">SHADOWRIDE</h1>
+                    <p class="text-[10px] text-lime-400/70 -mt-1 tracking-[4px]">SOUTH BROOKLYN ORACLE</p>
+                </div>
+            </div>
+            <div class="flex gap-4 text-sm uppercase tracking-widest flex-wrap justify-center mt-4 md:mt-0">
+                <button onclick="switchTab(0)" class="tab-btn tab-active px-3 py-2 hover:text-white transition" id="tab0">FORECAST</button>
+                <button onclick="switchTab(1)" class="tab-btn px-3 py-2 hover:text-white transition" id="tab1">ZONES</button>
+                <button onclick="switchTab(2)" class="tab-btn px-3 py-2 hover:text-white transition" id="tab2">CODE</button>
+                <button onclick="switchTab(3)" class="tab-btn px-3 py-2 hover:text-white transition" id="tab3">VAULT</button>
+                <button onclick="switchTab(4)" class="tab-btn px-3 py-2 hover:text-white transition" id="tab4">SUBMIT</button>
+                <button onclick="switchTab(5)" class="tab-btn px-3 py-2 hover:text-white transition" id="tab5">HEAT MAP</button>
+                <button onclick="switchTab(6)" class="tab-btn px-3 py-2 hover:text-white transition" id="tab6">RISK CALC</button>
+                <button onclick="switchTab(7)" class="tab-btn px-3 py-2 hover:text-white transition" id="tab7">NEWS FEED</button>
+                <button onclick="switchTab(8)" class="tab-btn px-3 py-2 hover:text-white transition" id="tab8">FORUM</button>
+            </div>
+            <div class="flex items-center gap-2 text-xs bg-black border border-lime-500/30 px-4 py-2 rounded mt-4 md:mt-0">
+                <div class="w-2 h-2 bg-lime-400 rounded-full animate-pulse"></div>
+                LIVE • FEB 21 2026
+            </div>
+        </div>
+    </header>
+
+    <div class="max-w-7xl mx-auto px-6 py-12">
+        
+        <!-- HERO -->
+        <div class="text-center mb-16 scanline">
+            <div class="inline-flex items-center gap-2 bg-black border border-lime-400/50 px-6 py-2 rounded-full mb-6">
+                <span class="text-red-500">⚠️</span>
+                <span class="text-xs uppercase tracking-widest">Fictional creative demo only • Ride 100% legal • Always obey NYPD</span>
+            </div>
+            <h2 class="text-6xl font-bold neon-text mb-4 tracking-tighter">SOUTH BROOKLYN</h2>
+            <p class="text-2xl text-lime-400/80 max-w-2xl mx-auto">High-power scooter &amp; e-bike crackdown estimates</p>
+            <div class="mt-8 text-xs text-lime-400/50">As of Feb 21 2026 • Based on current 15 mph rule + seasonal patterns + citywide trends</div>
+        </div>
+
+        <!-- TAB 0: FORECAST TIMELINE -->
+        <div id="content0" class="tab-content">
+            <div class="bg-black/70 border border-lime-500/30 rounded-3xl p-8 mb-12">
+                <h3 class="text-3xl mb-8 flex items-center gap-3">
+                    <i class="fas fa-chart-line"></i>
+                    CURRENT FORECAST ODDS
+                </h3>
+                
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="border-b border-lime-500/30">
+                            <th class="py-4 text-lime-400/70">By end of...</th>
+                            <th class="py-4 text-right text-lime-400/70">Crackdown Probability</th>
+                            <th class="py-4 w-96"></th>
+                            <th class="py-4 text-lime-400/70">Trend</th>
+                        </tr>
+                    </thead>
+                    <tbody class="text-xl">
+                        <tr class="border-b border-lime-500/10 past-row">
+                            <td class="py-6">Dec 2025</td>
+                            <td class="py-6 text-right font-mono">2%</td>
+                            <td class="py-6"><div class="h-3 bg-lime-500/20 rounded-full overflow-hidden"><div class="prob-bar h-full bg-lime-400 w-[2%]"></div></div></td>
+                            <td class="py-6"><button class="text-lime-400 hover:text-white" onclick="showChart(0)">View Chart</button></td>
+                        </tr>
+                        <tr class="border-b border-lime-500/10 past-row">
+                            <td class="py-6">Jan 2026</td>
+                            <td class="py-6 text-right font-mono">5%</td>
+                            <td class="py-6"><div class="h-3 bg-lime-500/20 rounded-full overflow-hidden"><div class="prob-bar h-full bg-lime-400 w-[5%]"></div></div></td>
+                            <td class="py-6"><button class="text-lime-400 hover:text-white" onclick="showChart(1)">View Chart</button></td>
+                        </tr>
+                        <tr class="border-b border-lime-500/10 past-row">
+                            <td class="py-6">Feb 2026</td>
+                            <td class="py-6 text-right font-mono">8%</td>
+                            <td class="py-6"><div class="h-3 bg-lime-500/20 rounded-full overflow-hidden"><div class="prob-bar h-full bg-lime-400 w-[8%]"></div></div></td>
+                            <td class="py-6"><button class="text-lime-400 hover:text-white" onclick="showChart(2)">View Chart</button></td>
+                        </tr>
+                        <tr class="border-b border-lime-500/10">
+                            <td class="py-6">March 2026</td>
+                            <td class="py-6 text-right font-mono">12%</td>
+                            <td class="py-6"><div class="h-3 bg-lime-500/20 rounded-full overflow-hidden"><div class="prob-bar h-full bg-lime-400 w-[12%]"></div></div></td>
+                            <td class="py-6"><button class="text-lime-400 hover:text-white" onclick="showChart(3)">View Chart</button></td>
+                        </tr>
+                        <tr class="border-b border-lime-500/10">
+                            <td class="py-6">April 2026</td>
+                            <td class="py-6 text-right font-mono">35%</td>
+                            <td class="py-6"><div class="h-3 bg-lime-500/20 rounded-full overflow-hidden"><div class="prob-bar h-full bg-lime-400 w-[35%]"></div></div></td>
+                            <td class="py-6"><button class="text-lime-400 hover:text-white" onclick="showChart(4)">View Chart</button></td>
+                        </tr>
+                        <tr class="border-b border-lime-500/10 bg-lime-500/10">
+                            <td class="py-6 font-bold">May 2026 ← MOST LIKELY</td>
+                            <td class="py-6 text-right font-mono font-bold">62%</td>
+                            <td class="py-6"><div class="h-3 bg-lime-500/20 rounded-full overflow-hidden"><div class="prob-bar h-full bg-lime-400 w-[62%]"></div></div></td>
+                            <td class="py-6"><button class="text-lime-400 hover:text-white" onclick="showChart(5)">View Chart</button></td>
+                        </tr>
+                        <tr class="border-b border-lime-500/10">
+                            <td class="py-6">June 2026</td>
+                            <td class="py-6 text-right font-mono">82%</td>
+                            <td class="py-6"><div class="h-3 bg-lime-500/20 rounded-full overflow-hidden"><div class="prob-bar h-full bg-lime-400 w-[82%]"></div></div></td>
+                            <td class="py-6"><button class="text-lime-400 hover:text-white" onclick="showChart(6)">View Chart</button></td>
+                        </tr>
+                        <tr class="border-b border-lime-500/10">
+                            <td class="py-6">July 2026</td>
+                            <td class="py-6 text-right font-mono">91%</td>
+                            <td class="py-6"><div class="h-3 bg-lime-500/20 rounded-full overflow-hidden"><div class="prob-bar h-full bg-lime-400 w-[91%]"></div></div></td>
+                            <td class="py-6"><button class="text-lime-400 hover:text-white" onclick="showChart(7)">View Chart</button></td>
+                        </tr>
+                        <tr>
+                            <td class="py-6">Dec 31 2026</td>
+                            <td class="py-6 text-right font-mono">98%</td>
+                            <td class="py-6"><div class="h-3 bg-lime-500/20 rounded-full overflow-hidden"><div class="prob-bar h-full bg-lime-400 w-[98%]"></div></div></td>
+                            <td class="py-6"><button class="text-lime-400 hover:text-white" onclick="showChart(8)">View Chart</button></td>
+                        </tr>
+                    </tbody>
+                </table>
+                
+                <div class="mt-10 text-center text-xs text-lime-400/50">
+                    Estimates based on 68th Precinct activity, 15 mph rule timeline, and local trends
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB 1: NEIGHBORHOODS -->
+        <div id="content1" class="tab-content hidden">
+            <h3 class="text-3xl mb-8 flex items-center gap-3">
+                <i class="fas fa-map-marked-alt"></i>
+                SOUTH BROOKLYN CALM ZONES
+            </h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                <!-- Bay Ridge -->
+                <div class="bg-black/70 border border-lime-500/30 rounded-3xl p-8 hover:border-lime-400 transition group">
+                    <div class="flex justify-between items-start mb-6">
+                        <div>
+                            <h4 class="text-2xl">BAY RIDGE</h4>
+                            <p class="text-lime-400/60 text-sm">3rd Ave • Shore Road • 68th–90th</p>
+                        </div>
+                        <div class="text-right">
+                            <div class="text-5xl font-mono text-lime-400">85%</div>
+                            <div class="text-xs text-lime-400/50">in next 6 months</div>
+                        </div>
+                    </div>
+                    <div class="h-2 bg-lime-500/20 rounded-full mb-8">
+                        <div class="h-2 bg-lime-400 rounded-full w-[85%]"></div>
+                    </div>
+                    <ul class="text-sm space-y-2 text-lime-400/70">
+                        <li class="flex gap-2"><i class="fas fa-check text-xs mt-1"></i> Higher visibility near 4th Ave commercial</li>
+                        <li class="flex gap-2"><i class="fas fa-check text-xs mt-1"></i> School zones = faster response</li>
+                        <li class="flex gap-2"><i class="fas fa-check text-xs mt-1"></i> Rising 311 complaints in 2025</li>
+                    </ul>
+                </div>
+                
+                <!-- Dyker Heights -->
+                <div class="bg-black/70 border border-lime-500/30 rounded-3xl p-8 hover:border-lime-400 transition group">
+                    <div class="flex justify-between items-start mb-6">
+                        <div>
+                            <h4 class="text-2xl">DYKER HEIGHTS</h4>
+                            <p class="text-lime-400/60 text-sm">86th–92nd • 10th–14th Ave</p>
+                        </div>
+                        <div class="text-right">
+                            <div class="text-5xl font-mono text-lime-400">78%</div>
+                            <div class="text-xs text-lime-400/50">in next 6 months</div>
+                        </div>
+                    </div>
+                    <div class="h-2 bg-lime-500/20 rounded-full mb-8">
+                        <div class="h-2 bg-lime-400 rounded-full w-[78%]"></div>
+                    </div>
+                    <ul class="text-sm space-y-2 text-lime-400/70">
+                        <li class="flex gap-2"><i class="fas fa-check text-xs mt-1"></i> Quieter residential = slower ramp</li>
+                        <li class="flex gap-2"><i class="fas fa-check text-xs mt-1"></i> Holiday lights traffic may delay focus</li>
+                        <li class="flex gap-2"><i class="fas fa-check text-xs mt-1"></i> Citywide summons surge spilling over</li>
+                    </ul>
+                </div>
+
+                <!-- Bensonhurst -->
+                <div class="bg-black/70 border border-lime-500/30 rounded-3xl p-8 hover:border-lime-400 transition group">
+                    <div class="flex justify-between items-start mb-6">
+                        <div>
+                            <h4 class="text-2xl">BENSONHURST</h4>
+                            <p class="text-lime-400/60 text-sm">18th Ave • 86th St • 62nd Pct</p>
+                        </div>
+                        <div class="text-right">
+                            <div class="text-5xl font-mono text-lime-400">88%</div>
+                            <div class="text-xs text-lime-400/50">in next 6 months</div>
+                        </div>
+                    </div>
+                    <div class="h-2 bg-lime-500/20 rounded-full mb-8">
+                        <div class="h-2 bg-lime-400 rounded-full w-[88%]"></div>
+                    </div>
+                    <ul class="text-sm space-y-2 text-lime-400/70">
+                        <li class="flex gap-2"><i class="fas fa-check text-xs mt-1"></i> Active 62nd Pct posts on 15 mph rule</li>
+                        <li class="flex gap-2"><i class="fas fa-check text-xs mt-1"></i> High delivery traffic on corridors</li>
+                        <li class="flex gap-2"><i class="fas fa-check text-xs mt-1"></i> 2025 seizure trends up citywide</li>
+                    </ul>
+                </div>
+
+                <!-- Sunset Park -->
+                <div class="bg-black/70 border border-lime-500/30 rounded-3xl p-8 hover:border-lime-400 transition group">
+                    <div class="flex justify-between items-start mb-6">
+                        <div>
+                            <h4 class="text-2xl">SUNSET PARK</h4>
+                            <p class="text-lime-400/60 text-sm">4th Ave • 5th Ave • 72nd Pct</p>
+                        </div>
+                        <div class="text-right">
+                            <div class="text-5xl font-mono text-lime-400">75%</div>
+                            <div class="text-xs text-lime-400/50">in next 6 months</div>
+                        </div>
+                    </div>
+                    <div class="h-2 bg-lime-500/20 rounded-full mb-8">
+                        <div class="h-2 bg-lime-400 rounded-full w-[75%]"></div>
+                    </div>
+                    <ul class="text-sm space-y-2 text-lime-400/70">
+                        <li class="flex gap-2"><i class="fas fa-check text-xs mt-1"></i> Industrial/delivery hotspots</li>
+                        <li class="flex gap-2"><i class="fas fa-check text-xs mt-1"></i> Part of Brooklyn quality-of-life push</li>
+                        <li class="flex gap-2"><i class="fas fa-check text-xs mt-1"></i> Criminal summonses rising in 2025</li>
+                    </ul>
+                </div>
+
+                <!-- Borough Park -->
+                <div class="bg-black/70 border border-lime-500/30 rounded-3xl p-8 hover:border-lime-400 transition group">
+                    <div class="flex justify-between items-start mb-6">
+                        <div>
+                            <h4 class="text-2xl">BOROUGH PARK</h4>
+                            <p class="text-lime-400/60 text-sm">13th Ave • 39th St • 66th Pct</p>
+                        </div>
+                        <div class="text-right">
+                            <div class="text-5xl font-mono text-lime-400">80%</div>
+                            <div class="text-xs text-lime-400/50">in next 6 months</div>
+                        </div>
+                    </div>
+                    <div class="h-2 bg-lime-500/20 rounded-full mb-8">
+                        <div class="h-2 bg-lime-400 rounded-full w-[80%]"></div>
+                    </div>
+                    <ul class="text-sm space-y-2 text-lime-400/70">
+                        <li class="flex gap-2"><i class="fas fa-check text-xs mt-1"></i> Residential with high pedestrian traffic</li>
+                        <li class="flex gap-2"><i class="fas fa-check text-xs mt-1"></i> Complaints driving enforcement</li>
+                        <li class="flex gap-2"><i class="fas fa-check text-xs mt-1"></i> Tied to 2025 citywide surge</li>
+                    </ul>
+                </div>
+
+                <!-- Sheepshead Bay -->
+                <div class="bg-black/70 border border-lime-500/30 rounded-3xl p-8 hover:border-lime-400 transition group">
+                    <div class="flex justify-between items-start mb-6">
+                        <div>
+                            <h4 class="text-2xl">SHEEPSHEAD BAY</h4>
+                            <p class="text-lime-400/60 text-sm">Emmons Ave • Ocean Pkwy • 61st Pct</p>
+                        </div>
+                        <div class="text-right">
+                            <div class="text-5xl font-mono text-lime-400">70%</div>
+                            <div class="text-xs text-lime-400/50">in next 6 months</div>
+                        </div>
+                    </div>
+                    <div class="h-2 bg-lime-500/20 rounded-full mb-8">
+                        <div class="h-2 bg-lime-400 rounded-full w-[70%]"></div>
+                    </div>
+                    <ul class="text-sm space-y-2 text-lime-400/70">
+                        <li class="flex gap-2"><i class="fas fa-check text-xs mt-1"></i> More suburban vibe, lower density</li>
+                        <li class="flex gap-2"><i class="fas fa-check text-xs mt-1"></i> Waterfront paths see seasonal spikes</li>
+                        <li class="flex gap-2"><i class="fas fa-check text-xs mt-1"></i> Following Brooklyn-wide trends</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="mt-12">
+                <h4 class="text-2xl mb-4 flex items-center gap-3">
+                    <i class="fas fa-trend-up"></i>
+                    CITYWIDE TRENDS SPILLING OVER
+                </h4>
+                <div class="bg-black/50 border border-lime-500/20 rounded-2xl p-6 text-sm space-y-4">
+                    <p>2025 saw 6,000+ criminal summonses citywide (Q2 alone), up 10x from Q1. Brooklyn corridors like Flatbush & Fulton are hotspots, with seizures >13,000 in first half of year.</p>
+                    <p>Quality-of-Life initiative in 6 precincts (2 in BK) driving the push. Expect residential spillover as 311 complaints rise with warmer weather.</p>
+                    <p>Grouped Probability: <span class="text-lime-400 font-mono">84%</span> that at least one more zone sees heavy enforcement by August 31 2026.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB 2: RIDER CODE -->
+        <div id="content2" class="tab-content hidden">
+            <div class="max-w-2xl mx-auto bg-black/70 border border-lime-500/30 rounded-3xl p-10">
+                <h3 class="text-3xl mb-8 text-center">RIDER SURVIVAL CODE</h3>
+                <div class="space-y-8">
+                    <div class="flex gap-6">
+                        <div class="text-4xl">1️⃣</div>
+                        <div>
+                            <h4 class="font-bold text-lime-400">See a cop? Be respectful.</h4>
+                            <p class="text-lime-400/70">Pull over calmly. Hands visible. Smile. No attitude = usually just a warning.</p>
+                        </div>
+                    </div>
+                    <div class="flex gap-6">
+                        <div class="text-4xl">2️⃣</div>
+                        <div>
+                            <h4 class="font-bold text-lime-400">Ride normal • Sub 20 mph</h4>
+                            <p class="text-lime-400/70">Even if your build can do 50, keep it chill in residential blocks. 15 mph rule is the law.</p>
+                        </div>
+                    </div>
+                    <div class="flex gap-6">
+                        <div class="text-4xl">3️⃣</div>
+                        <div>
+                            <h4 class="font-bold text-lime-400">No sidewalks. No wheelies near kids.</h4>
+                            <p class="text-lime-400/70">311 complaints are what triggers precinct focus.</p>
+                        </div>
+                    </div>
+                    <div class="flex gap-6">
+                        <div class="text-4xl">4️⃣</div>
+                        <div>
+                            <h4 class="font-bold text-lime-400">Know your rights &amp; limits</h4>
+                            <p class="text-lime-400/70">Pedal-assist under 750 W = legal Class 1/2 in most cases. Anything else is risk.</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="mt-12 text-center">
+                    <div class="inline-block bg-red-900/30 border border-red-500/50 text-red-400 text-xs px-8 py-4 rounded-2xl">
+                        THIS IS NOT LEGAL ADVICE.<br>
+                        HIGH-POWER MODS ARE OFTEN ILLEGAL IN NYC.<br>
+                        RIDE AT YOUR OWN RISK • STAY SAFE &amp; LEGAL
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB 3: THE VAULT -->
+        <div id="content3" class="tab-content hidden">
+            <div class="bg-gradient-to-br from-black via-zinc-950 to-black border border-lime-500/30 rounded-3xl p-16 text-center max-w-3xl mx-auto">
+                <div class="mx-auto w-24 h-24 bg-lime-400/10 border border-lime-400/30 rounded-2xl flex items-center justify-center mb-8">
+                    <i class="fas fa-lock text-6xl text-lime-400"></i>
+                </div>
+                <h3 class="text-4xl mb-4 neon-text">THE VAULT</h3>
+                <p class="text-2xl text-lime-400/80 mb-6">South Brooklyn Safe Ride Routes</p>
+                <p class="max-w-md mx-auto text-lime-400/60 mb-12">
+                    Verified community maps dropping Summer 2026.<br>
+                    Legal paths only. No chase scenarios. No evasion content.<br>
+                    <span class="text-red-400 font-bold">Ride legal or stay home.</span>
+                </p>
+                
+                <div class="bg-black/80 border border-dashed border-lime-400/50 rounded-2xl p-8 max-w-sm mx-auto">
+                    <p class="uppercase text-xs tracking-widest mb-4">Early access waitlist</p>
+                    <input id="username" type="text" placeholder="Rider handle" 
+                           class="w-full bg-black border border-lime-400/30 focus:border-lime-400 text-center py-4 rounded-xl mb-4 outline-none">
+                    <button onclick="mockSubmit()" 
+                            class="w-full bg-lime-400 hover:bg-white text-black font-bold py-4 rounded-xl transition">
+                        JOIN THE LIST
+                    </button>
+                    <p id="vault-msg" class="text-xs mt-4 text-lime-400/50 hidden">Request received. Stay legal out there.</p>
+                </div>
+                
+                <div class="mt-16 text-[10px] text-lime-400/30">
+                    This is 100% fictional creative content.<br>
+                    No actual routes, no secret groups, no police evasion.<br>
+                    High-power riding in NYC carries real legal risk.
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB 4: SUBMISSIONS (NEW) -->
+        <div id="content4" class="tab-content hidden">
+            <div class="max-w-3xl mx-auto bg-black/70 border border-lime-500/30 rounded-3xl p-10">
+                <h3 class="text-3xl mb-8 text-center flex items-center justify-center gap-3">
+                    <i class="fas fa-upload"></i> SUBMIT YOUR TICKET
+                </h3>
+                <p class="text-center text-lime-400/70 mb-8">Help improve the oracle by submitting your NYPD traffic ticket details and any footage. All anonymous & fictional demo only.</p>
+                <form class="submit-form space-y-6">
+                    <input type="text" placeholder="Rider Handle (anonymous)" class="w-full bg-black border border-lime-400/30 py-4 px-6 rounded-xl outline-none">
+                    <input type="text" placeholder="Ticket Number" class="w-full bg-black border border-lime-400/30 py-4 px-6 rounded-xl outline-none">
+                    <textarea placeholder="Describe the incident (location, time, what happened)" class="w-full bg-black border border-lime-400/30 py-4 px-6 rounded-xl outline-none h-32"></textarea>
+                    <div>
+                        <label class="block text-sm mb-2">Upload Ticket Scan / Footage (mock - no real upload)</label>
+                        <input type="file" multiple class="w-full">
+                    </div>
+                    <button type="button" onclick="mockTicketSubmit()" class="w-full bg-lime-400 hover:bg-white text-black font-bold py-4 rounded-xl transition">
+                        SUBMIT TO ORACLE
+                    </button>
+                </form>
+                <p id="submit-msg" class="text-center text-xs mt-6 text-lime-400/50 hidden">Submission logged. Thanks for contributing to the community intel!</p>
+                <div class="mt-12 text-center text-red-400 text-xs">
+                    Fictional demo: No real data stored. Use to simulate community contributions for better predictions.
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB 5: HEAT MAP (NEW CRAZY FEATURE 1: Interactive Canvas Map) -->
+        <div id="content5" class="tab-content hidden">
+            <h3 class="text-3xl mb-8 flex items-center gap-3">
+                <i class="fas fa-fire"></i> CRACKDOWN HEAT MAP
+            </h3>
+            <p class="text-lime-400/70 mb-8">Crazy interactive heat map of South Brooklyn. Click zones for details (mock canvas demo).</p>
+            <canvas id="heat-map-canvas" class="heat-map-canvas w-full h-96" width="800" height="400"></canvas>
+            <div class="mt-8 text-center text-xs text-lime-400/50">
+                Red = High Risk, Yellow = Medium, Green = Low. Based on user reports & trends.
+            </div>
+        </div>
+
+        <!-- TAB 6: RISK CALCULATOR (NEW CRAZY FEATURE 2: Personal Risk Gauge) -->
+        <div id="content6" class="tab-content hidden">
+            <div class="max-w-2xl mx-auto">
+                <h3 class="text-3xl mb-8 text-center flex items-center justify-center gap-3">
+                    <i class="fas fa-calculator"></i> PERSONAL RISK CALCULATOR
+                </h3>
+                <p class="text-center text-lime-400/70 mb-8">Input your ride details for a crazy animated risk score (0-100% bust chance).</p>
+                <form class="space-y-6">
+                    <select id="zone-select" class="w-full bg-black border border-lime-400/30 py-4 px-6 rounded-xl outline-none">
+                        <option>Bay Ridge</option>
+                        <option>Dyker Heights</option>
+                        <option>Bensonhurst</option>
+                        <option>Sunset Park</option>
+                        <option>Borough Park</option>
+                        <option>Sheepshead Bay</option>
+                    </select>
+                    <input type="number" id="speed-input" placeholder="Avg Speed (mph)" min="1" max="50" class="w-full bg-black border border-lime-400/30 py-4 px-6 rounded-xl outline-none">
+                    <input type="number" id="power-input" placeholder="Bike Power (W)" min="100" max="5000" class="w-full bg-black border border-lime-400/30 py-4 px-6 rounded-xl outline-none">
+                    <button type="button" onclick="calculateRisk()" class="w-full bg-lime-400 hover:bg-white text-black font-bold py-4 rounded-xl transition">
+                        CALCULATE RISK
+                    </button>
+                </form>
+                <div class="mt-8 text-center">
+                    <div class="risk-gauge mx-auto" id="risk-gauge">
+                        <div class="risk-needle" id="risk-needle"></div>
+                    </div>
+                    <p id="risk-score" class="text-4xl font-mono mt-4">0%</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB 7: NEWS FEED (NEW CRAZY FEATURE 3: Dynamic News Scroll) -->
+        <div id="content7" class="tab-content hidden">
+            <h3 class="text-3xl mb-8 flex items-center gap-3">
+                <i class="fas fa-newspaper"></i> ENFORCEMENT NEWS FEED
+            </h3>
+            <p class="text-lime-400/70 mb-8">Real-time-ish fictional news blasts on crackdowns. Scroll for chaos.</p>
+            <div class="space-y-4">
+                <div class="news-item">
+                    <h4 class="font-bold">Feb 20: 68th Pct Seizes 50 High-Power Scooters</h4>
+                    <p>Big raid in Bay Ridge. Riders beware on 3rd Ave.</p>
+                </div>
+                <div class="news-item">
+                    <h4 class="font-bold">Feb 15: New 15 mph Drones Spotted in Dyker</h4>
+                    <p>Tech upgrade: Auto-ticketing drones testing phase.</p>
+                </div>
+                <div class="news-item">
+                    <h4 class="font-bold">Feb 10: Bensonhurst Complaints Skyrocket</h4>
+                    <p>311 calls up 200%. Expect heavy patrols soon.</p>
+                </div>
+                <div class="news-item">
+                    <h4 class="font-bold">Feb 5: Sunset Park Battery Fire Sparks Ban Talk</h4>
+                    <p>One incident, big overreaction? Stay tuned.</p>
+                </div>
+                <div class="news-item">
+                    <h4 class="font-bold">Jan 30: Borough Park Mod Shop Busted</h4>
+                    <p>Underground 3000W upgrades no more.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB 8: COMMUNITY FORUM (NEW CRAZY FEATURE 4: Mock Forum with Replies) -->
+        <div id="content8" class="tab-content hidden">
+            <h3 class="text-3xl mb-8 flex items-center gap-3">
+                <i class="fas fa-comments"></i> RIDER FORUM
+            </h3>
+            <p class="text-lime-400/70 mb-8">Crazy community chatter. Post your stories (mock demo - type & hit enter).</p>
+            <div class="forum-posts space-y-4">
+                <div class="forum-post">
+                    <p class="font-bold">RiderX: Got pulled over in Bay Ridge yesterday. Kept it under 20, just warning!</p>
+                    <p class="text-xs text-lime-400/50">Replies: Nice dodge.</p>
+                </div>
+                <div class="forum-post">
+                    <p class="font-bold">SpeedDemon: Anyone know safe routes in Sheepshead?</p>
+                    <p class="text-xs text-lime-400/50">Replies: Stick to Ocean Pkwy bike lane.</p>
+                </div>
+                <div class="forum-post">
+                    <p class="font-bold">Anon: 62nd Pct is wild right now. Avoid 86th St.</p>
+                    <p class="text-xs text-lime-400/50">Replies: Confirmed, saw 3 seizures.</p>
+                </div>
+            </div>
+            <div class="mt-8 flex gap-4">
+                <input id="forum-input" type="text" placeholder="Post your intel..." class="flex-1 bg-black border border-lime-400/30 py-4 px-6 rounded-xl outline-none">
+                <button onclick="mockForumPost()" class="bg-lime-400 hover:bg-white text-black font-bold px-6 py-4 rounded-xl transition">
+                    POST
+                </button>
+            </div>
+            <p id="forum-msg" class="text-xs mt-4 text-lime-400/50 hidden">Posted! (Demo only)</p>
+        </div>
+
+    </div>
+
+    <!-- CHART MODAL -->
+    <div id="chart-modal" class="flex">
+        <div class="modal-content">
+            <span class="close" onclick="closeChart()">&times;</span>
+            <h3 id="chart-title" class="text-2xl mb-4 text-center">Probability Trend</h3>
+            <p id="resolution-note" class="text-center text-sm text-red-400 mb-4"></p>
+            <canvas id="trend-chart" height="200"></canvas>
+        </div>
+    </div>
+
+    <!-- FOOTER -->
+    <footer class="border-t border-lime-500/20 bg-black py-8 text-center text-xs text-lime-400/40">
+        <p>SHADOWRIDE ORACLE — Purely fictional creative HTML demo inspired by public NYC enforcement trends</p>
+        <p class="mt-1">Not affiliated with any real group • Do not use for illegal activity • Ride safe &amp; legal</p>
+        <p class="mt-6">Made with ❤️ for the conversation • Paste into any online HTML viewer</p>
+    </footer>
+
+    <script>
+        const months = ['Dec 2025', 'Jan 2026', 'Feb 2026', 'Mar 2026', 'Apr 2026', 'May 2026', 'Jun 2026', 'Jul 2026', 'Dec 2026'];
+        const probs = [2, 5, 8, 12, 35, 62, 82, 91, 98];
+        const currentIndex = 2; // Feb 2026
+
+        let chart;
+
+        function switchTab(n) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+            document.getElementById('content' + n).classList.remove('hidden');
+            
+            document.querySelectorAll('.tab-btn').forEach((btn, i) => {
+                if (i === n) btn.classList.add('tab-active');
+                else btn.classList.remove('tab-active');
+            });
+            
+            if (n === 5) drawHeatMap();
+        }
+        
+        function mockSubmit() {
+            const msg = document.getElementById('vault-msg');
+            msg.classList.remove('hidden');
+            msg.textContent = "✅ Request logged. Remember: only legal riding allowed.";
+            setTimeout(() => {
+                msg.classList.add('hidden');
+            }, 4000);
+        }
+
+        function mockTicketSubmit() {
+            const msg = document.getElementById('submit-msg');
+            msg.classList.remove('hidden');
+            setTimeout(() => msg.classList.add('hidden'), 4000);
+        }
+
+        function mockForumPost() {
+            const input = document.getElementById('forum-input');
+            if (input.value) {
+                const post = document.createElement('div');
+                post.className = 'forum-post';
+                post.innerHTML = `<p class="font-bold">You: ${input.value}</p><p class="text-xs text-lime-400/50">Replies: Coming soon...</p>`;
+                document.querySelector('.forum-posts').prepend(post);
+                input.value = '';
+                const msg = document.getElementById('forum-msg');
+                msg.classList.remove('hidden');
+                setTimeout(() => msg.classList.add('hidden'), 3000);
+            }
+        }
+
+        function showChart(index) {
+            const modal = document.getElementById('chart-modal');
+            const title = document.getElementById('chart-title');
+            const note = document.getElementById('resolution-note');
+            const ctx = document.getElementById('trend-chart').getContext('2d');
+
+            title.textContent = `Trend Up To ${months[index]}`;
+            
+            if (index <= currentIndex) {
+                note.textContent = 'Resolved: 0% (No heavy crackdown occurred)';
+            } else {
+                note.textContent = 'Projected based on trends';
+            }
+
+            const labels = months.slice(0, index + 1);
+            const data = probs.slice(0, index + 1);
+
+            if (chart) chart.destroy();
+
+            chart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Crackdown Probability (%)',
+                        data: data,
+                        borderColor: '#a3e635',
+                        backgroundColor: '#a3e63550',
+                        tension: 0.1,
+                        fill: true
+                    }]
+                },
+                options: {
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            max: 100,
+                            ticks: { color: '#a3e635' },
+                            grid: { color: '#a3e63520' }
+                        },
+                        x: {
+                            ticks: { color: '#a3e635' },
+                            grid: { color: '#a3e63520' }
+                        }
+                    },
+                    plugins: {
+                        legend: { labels: { color: '#a3e635' } }
+                    }
+                }
+            });
+
+            modal.style.display = 'flex';
+        }
+
+        function closeChart() {
+            document.getElementById('chart-modal').style.display = 'none';
+        }
+
+        function drawHeatMap() {
+            const canvas = document.getElementById('heat-map-canvas');
+            const ctx = canvas.getContext('2d');
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Mock Brooklyn map with zones
+            ctx.fillStyle = '#222';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Zones (rects with colors)
+            const zones = [
+                {name: 'Bay Ridge', x: 50, y: 50, w: 150, h: 100, color: 'rgba(255,0,0,0.7)', prob: 85},
+                {name: 'Dyker Heights', x: 250, y: 50, w: 150, h: 100, color: 'rgba(255,255,0,0.7)', prob: 78},
+                {name: 'Bensonhurst', x: 450, y: 50, w: 150, h: 100, color: 'rgba(255,0,0,0.7)', prob: 88},
+                {name: 'Sunset Park', x: 50, y: 200, w: 150, h: 100, color: 'rgba(255,255,0,0.7)', prob: 75},
+                {name: 'Borough Park', x: 250, y: 200, w: 150, h: 100, color: 'rgba(255,0,0,0.7)', prob: 80},
+                {name: 'Sheepshead Bay', x: 450, y: 200, w: 150, h: 100, color: 'rgba(0,255,0,0.7)', prob: 70}
+            ];
+
+            zones.forEach(zone => {
+                ctx.fillStyle = zone.color;
+                ctx.fillRect(zone.x, zone.y, zone.w, zone.h);
+                ctx.strokeStyle = '#a3e635';
+                ctx.strokeRect(zone.x, zone.y, zone.w, zone.h);
+                ctx.fillStyle = '#fff';
+                ctx.font = '12px Press Start 2P';
+                ctx.fillText(zone.name, zone.x + 10, zone.y + 20);
+                ctx.fillText(`${zone.prob}%`, zone.x + 10, zone.y + 40);
+            });
+
+            canvas.addEventListener('click', (e) => {
+                const rect = canvas.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+                zones.forEach(zone => {
+                    if (x > zone.x && x < zone.x + zone.w && y > zone.y && y < zone.y + zone.h) {
+                        alert(`Zone: ${zone.name}\nRisk: ${zone.prob}%\nTip: Ride slow here!`);
+                    }
+                });
+            });
+        }
+
+        function calculateRisk() {
+            const zone = document.getElementById('zone-select').value;
+            const speed = parseInt(document.getElementById('speed-input').value) || 0;
+            const power = parseInt(document.getElementById('power-input').value) || 0;
+
+            let baseRisk = { 'Bay Ridge': 85, 'Dyker Heights': 78, 'Bensonhurst': 88, 'Sunset Park': 75, 'Borough Park': 80, 'Sheepshead Bay': 70 }[zone];
+            baseRisk += (speed > 20 ? (speed - 20) * 2 : 0);
+            baseRisk += (power > 750 ? (power - 750) / 50 : 0);
+            const risk = Math.min(100, Math.max(0, baseRisk));
+
+            document.getElementById('risk-score').textContent = `${Math.round(risk)}%`;
+            const angle = (risk / 100) * 180 - 90;
+            document.getElementById('risk-needle').style.transform = `rotate(${angle}deg)`;
+        }
+        
+        // Animate probability bars on load
+        window.onload = () => {
+            switchTab(0);
+            document.querySelectorAll('.prob-bar').forEach(bar => {
+                const w = bar.style.width;
+                bar.style.width = '0%';
+                setTimeout(() => {
+                    bar.style.width = w;
+                }, 300);
+            });
+        };
+    </script>
+</body>
+</html>
